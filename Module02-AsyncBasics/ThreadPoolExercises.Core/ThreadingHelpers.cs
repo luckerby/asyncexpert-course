@@ -86,7 +86,6 @@ namespace ThreadPoolExercises.Core
             int cancelIntervalCheck_ThreadPool = 100;
 
             AutoResetEvent finishEvent = new AutoResetEvent(false);
-            //ThreadPool.RegisterWaitForSingleObject(finishEvent, Callback, null, -1, true);
 
             // Convert from 'Action' to 'WaitCallback')
             ThreadPool.QueueUserWorkItem(state => {
@@ -126,14 +125,5 @@ namespace ThreadPoolExercises.Core
             }
 
         }
-
-        /*
-        private static void Callback(object? state, bool timedOut)
-
-        {
-            Console.WriteLine("Signal received");
-            //exit.Set();
-        }
-        */
     }
 }
