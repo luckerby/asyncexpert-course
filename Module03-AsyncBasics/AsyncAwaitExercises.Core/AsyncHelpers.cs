@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Net.Http;
+using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -22,7 +23,52 @@ namespace AsyncAwaitExercises.Core
             // * `HttpClient.GetAsync` does not accept cancellation token (use `GetAsync` instead)
             // * you may use `EnsureSuccessStatusCode()` method
 
-            return string.Empty;
+            if (maxTries < 2)
+                throw new ArgumentException();
+
+            Exception lastAttemptException = null;
+            string payloadData = null;                  // the payload of the retrieved page
+            bool currentRequestFailed = false;
+            HttpResponseMessage response = null;
+            int noOfWaitsSoFar = 0;
+            do
+            {
+                currentRequestFailed = false;
+                try
+                {
+                    // Create a new response every time, to ensure we don't
+                    //  reuse a former value. GC should pick up the former ones
+                    response = new HttpResponseMessage();
+                    Console.WriteLine("Issuing GetAsync");
+                    response = await client.GetAsync(url, token);
+                    Console.WriteLine("GetAsync done");
+                }
+                catch (Exception e)
+                {
+                    Console.WriteLine("Exception fired");
+                    currentRequestFailed = true;
+                    lastAttemptException = e;
+                }
+                if (!response.IsSuccessStatusCode)
+                    currentRequestFailed = true;
+                if (!currentRequestFailed)
+                    payloadData = await response.Content.ReadAsStringAsync();
+
+                // Wait the required number of seconds
+                if(currentRequestFailed)
+                {
+                    int noMillisecondsToWait = (1 << noOfWaitsSoFar) * 1000;
+                    Console.WriteLine($"Waiting {noMillisecondsToWait} ms");
+                    await Task.Delay(noMillisecondsToWait, token);
+                    noOfWaitsSoFar++;
+                }
+
+            } while (currentRequestFailed && noOfWaitsSoFar<maxTries);
+
+            if (!currentRequestFailed)
+                return payloadData;
+            else
+                throw lastAttemptException ?? new HttpRequestException();
         }
 
     }
